@@ -79,6 +79,9 @@ public:
     {
         return glm::lookAt(Position, Position + Front, Up);
     }
+    glm::mat4 GetProjectionMatrix(float aspectRatio, float nearPlane, float farPlane) const {
+        return glm::perspective(glm::radians(Zoom), aspectRatio, nearPlane, farPlane);
+    }
 
     // 处理键盘输入
     void ProcessKeyboard(Camera_Movement direction, float deltaTime)

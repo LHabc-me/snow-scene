@@ -20,15 +20,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="resources\snow-scene.glb">
-      <Filter>资源文件</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="includes\camera.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="includes\filesystem.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="includes\mesh.h">
@@ -40,8 +32,13 @@
     <ClInclude Include="includes\shader.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="includes\shader_m.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\model-frag.glsl">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="shaders\model-vert.glsl">
+      <Filter>资源文件</Filter>
+    </None>
   </ItemGroup>
 </Project>
