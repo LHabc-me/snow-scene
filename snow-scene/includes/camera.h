@@ -5,8 +5,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include <vector>
-
 // 鼠标移动方向
 enum Camera_Movement
 {
@@ -79,7 +77,9 @@ public:
     {
         return glm::lookAt(Position, Position + Front, Up);
     }
-    glm::mat4 GetProjectionMatrix(float aspectRatio, float nearPlane, float farPlane) const {
+
+    glm::mat4 GetProjectionMatrix(float aspectRatio, float nearPlane, float farPlane) const
+    {
         return glm::perspective(glm::radians(Zoom), aspectRatio, nearPlane, farPlane);
     }
 

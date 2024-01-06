@@ -15,5 +15,5 @@ void main() {
     TexCoords = aTexCoords;
     vec4 fragPosWorld = model * vec4(aPos, 1.0);
     gl_Position = projection * view * fragPosWorld;
-    FragPosLightSpace = lightSpaceMatrix * fragPosWorld; // 计算光源空间中的位置
+    FragPosLightSpace = lightSpaceMatrix * fragPosWorld;
 }

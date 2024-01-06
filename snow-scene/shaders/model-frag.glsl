@@ -4,7 +4,7 @@ out vec4 FragColor;
 in vec2 TexCoords;
 in vec3 Normal;  // 接收法线向量
 in vec3 FragPos;
-in vec4 FragPosLightSpace; // 添加此行
+in vec4 FragPosLightSpace;
 
 uniform sampler2D texture_diffuse1;
 uniform vec3 lightColor;
@@ -12,6 +12,7 @@ uniform vec3 lightPos;
 uniform vec3 viewPos;
 uniform vec3 objectColor;
 uniform sampler2D shadowMap; // 阴影贴图
+uniform vec4 color;
 
 float ShadowCalculation(vec4 fragPosLightSpace) {
     // 获取当前片段的深度
@@ -26,7 +27,13 @@ float ShadowCalculation(vec4 fragPosLightSpace) {
 
 void main()
 {    
-   // 纹理采样
+    // 如果设置了color，则直接将color作为片段的颜色
+    if (color != vec4(0.0)) {
+        FragColor = color;
+        return;
+    }
+    
+    // 纹理采样
     vec4 texColor = texture(texture_diffuse1, TexCoords);
     vec3 norm = normalize(Normal); // 使用传递的法线向量
     vec3 lightDir = normalize(lightPos - FragPos);

@@ -20,7 +20,7 @@ void main()
     Normal = mat3(transpose(inverse(model))) * aNormal; // 转换法线向量
     TexCoords = aTexCoords;
     ourColor = aColor;
-    FragPos = vec3(model * vec4(aPos, 1.0)); // Calculate fragment position
+    FragPos = vec3(model * vec4(aPos, 1.0));
     gl_Position = projection * view * model * vec4(aPos, 1.0);
     FragPosLightSpace = lightSpaceMatrix * vec4(FragPos, 1.0); // 计算并传递光源空间位置
 }

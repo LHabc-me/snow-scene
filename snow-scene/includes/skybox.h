@@ -1,10 +1,10 @@
-﻿#include <vector>
+﻿#ifndef SKYBOX_H
+#define SKYBOX_H
+
+#include <vector>
 #include <string>
 #include <iostream>
 #include <glad/glad.h>
-
-// #define STB_IMAGE_IMPLEMENTATION
-// #include <stb_image.h>
 
 #include "shader.h"
 
@@ -119,3 +119,5 @@ private:
         return textureID;
     }
 };
+
+#endif

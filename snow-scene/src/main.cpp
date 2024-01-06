@@ -10,6 +10,7 @@
 #include "camera.h"
 #include "model.h"
 #include "skybox.h"
+#include "snowflake.h"
 
 #include <iostream>
 
@@ -21,8 +22,10 @@ void drawStamp(Shader shader, Model stump, glm::vec3 stumpPosition, glm::vec3 st
 void drawHouse(Shader shader, Model house);
 void drawSnowman(Shader shader, Model snowman);
 void initDepthBuffer(GLuint& depthMapFBO, GLuint& depthMap);
-void renderShadowMap(Shader& depthShader, GLuint depthMapFBO, glm::vec3 lightPos, Model& stump, Model& house, Model& snowman);
-void applyShadow(Shader& shader, GLuint depthMap, glm::mat4 lightSpaceMatrix, Model& stump, Model& house, Model& snowman);
+void renderShadowMap(Shader& depthShader, GLuint depthMapFBO, glm::vec3 lightPos, Model& stump, Model& house,
+                     Model& snowman);
+void applyShadow(Shader& shader, GLuint depthMap, glm::mat4 lightSpaceMatrix, Model& stump, Model& house,
+                 Model& snowman);
 glm::vec3 screenToWorldCoords(double xpos, double ypos, GLFWwindow* window, glm::mat4 view, glm::mat4 projection);
 glm::vec3 ScreenPosToWorldRay(int mouseX, int mouseY, int screenWidth, int screenHeight, glm::mat4 ViewMatrix,
                               glm::mat4 ProjectionMatrix);
@@ -53,100 +56,11 @@ bool zKeyPressed = false;
 bool isSunMoving = true;
 bool xKeyPressed = false;
 
-void drawCrystal(Shader& shader, Model& crystal, glm::vec3 position)
-{
-    shader.use();
-    glm::mat4 projectionMat = glm::perspective(glm::radians(camera.Zoom),
-                                               (float)SCR_WIDTH / (float)SCR_HEIGHT,
-                                               0.1f,
-                                               100.0f);
-    glm::mat4 viewMat = camera.GetViewMatrix();
-    shader.setMat4("projection", projectionMat);
-    shader.setMat4("view", viewMat);
-    glm::mat4 modelMat = glm::translate(glm::mat4(1.0f), position);
-    modelMat = glm::scale(modelMat, glm::vec3(0.2f, 0.2f, 0.2f));
-    shader.setMat4("model", modelMat);
-    crystal.Draw(shader);
-}
 
-class Snowflake
-{
-public:
-    glm::vec3 position;
-    glm::vec3 velocity;
-
-    Snowflake(glm::vec3 pos, glm::vec3 vel) : position(pos), velocity(vel)
-    {
-    }
-
-    void update(float deltaTime)
-    {
-        position += velocity * deltaTime;
-    }
-};
-
-class SnowflakeGenerator
-{
-public:
-    bool isSnowing = true; // 控制是否下雪的变量
-    std::vector<Snowflake> snowflakes;
-    float spawnInterval = 1.0f; // 每秒生成雪花的时间间隔
-    float elapsedTime = 0.0f;
-    float xRange = 16.0f; // x轴范围
-    float yStart = 10.0f; // y轴起始高度
-    float zRange = 16.0f; // z轴范围
-    float xVelRange = 1.0f; // x轴速度范围
-    float yVel = -2.0f; // y轴速度（向下）
-    float zVelRange = 1.0f; // z轴速度范围
-    void update(float deltaTime) {
-        if (!isSnowing) return; // 如果不下雪，直接返回
-        elapsedTime += deltaTime;
-        if (elapsedTime >= spawnInterval)
-        {
-            elapsedTime = 0.0f;
-            int count = rand() % 5 + 1; // 随机生成1到5朵雪花
-            for (int i = 0; i < count; i++)
-            {
-                float x = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * xRange - 8.0f;
-                float y = yStart;
-                float z = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * zRange - 8.0f;
-
-                float xVel = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * xVelRange) - xVelRange / 2.0f;
-                float zVel = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * zVelRange) - zVelRange / 2.0f;
-                glm::vec3 pos = glm::vec3(x, y, z);
-                glm::vec3 vel = glm::vec3(xVel, yVel, zVel);
-                snowflakes.push_back(Snowflake(pos, vel));
-            }
-        }
-
-        for (auto it = snowflakes.begin(); it != snowflakes.end();)
-        {
-            it->update(deltaTime);
-            if (it->position.y <= 0)
-            {
-                it = snowflakes.erase(it);
-            }
-            else
-            {
-                ++it;
-            }
-        }
-    }
-
-    void draw(Shader& shader, Model& model)
-    {
-        for (const auto& snowflake : snowflakes)
-        {
-            drawCrystal(shader, model, snowflake.position);
-        }
-    } 
-    void clearSnowflakes() {
-        snowflakes.clear(); // 清除所有雪花
-    }
-};
 SnowflakeGenerator generator;
 glm::vec3 lightPos;
 glm::vec3 initialLightPos = glm::vec3(10.0f, 10.0f, 10.0f);
+
 int main()
 {
     // glfw初始化
@@ -226,17 +140,18 @@ int main()
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        if (isSunMoving) {
-        // 计算移动时间
-        float speedFactor = 0.2f;
-        float timeValue = glfwGetTime() * speedFactor;
-        // 使用球面坐标计算光源位置
-        float maxAltitude = 1.0f;
-        float lightPosX = 20.0f * cos(timeValue);
-        float lightPosY = 20.0f * sin(timeValue);
-        float lightPosZ = sin(timeValue) * maxAltitude;
+        if (isSunMoving)
+        {
+            // 计算移动时间
+            float speedFactor = 0.2f;
+            float timeValue = glfwGetTime() * speedFactor;
+            // 使用球面坐标计算光源位置
+            float maxAltitude = 1.0f;
+            float lightPosX = 20.0f * cos(timeValue);
+            float lightPosY = 20.0f * sin(timeValue);
+            float lightPosZ = sin(timeValue) * maxAltitude;
 
-        lightPos = glm::vec3(lightPosX, lightPosY, lightPosZ);
+            lightPos = glm::vec3(lightPosX, lightPosY, lightPosZ);
         }
         shader.use();
         shader.setVec3("lightColor", lightColor);
@@ -254,17 +169,17 @@ int main()
         renderShadowMap(depthShader, depthMapFBO, lightPos, stump, house, snowman);
         // 应用阴影到场景
         applyShadow(shader, depthMap, lightSpaceMatrix, stump, house, snowman);
-      
+
+
+        // 清空纹理
         generator.update(deltaTime);
-        generator.draw(shader, crystal);
+        generator.draw(shader, crystal, camera, SCR_WIDTH, SCR_HEIGHT);
 
         glm::mat4 view = camera.GetViewMatrix();
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom),
                                                 (float)SCR_WIDTH / (float)SCR_HEIGHT,
                                                 0.1f,
                                                 100.0f);
-        // 放大天空盒
-        // projection = glm::scale(projection, glm::vec3(10.0f, 10.0f, 10.0f));
         skybox.draw(view, projection);
 
         glfwSwapBuffers(window);
@@ -299,7 +214,8 @@ void initDepthBuffer(GLuint& depthMapFBO, GLuint& depthMap)
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void renderShadowMap(Shader& depthShader, GLuint depthMapFBO, glm::vec3 lightPos, Model& stump, Model& house, Model& snowman)
+void renderShadowMap(Shader& depthShader, GLuint depthMapFBO, glm::vec3 lightPos, Model& stump, Model& house,
+                     Model& snowman)
 {
     // 设置视锥体和视图矩阵
     glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 1.0f, 7.5f);
@@ -324,8 +240,9 @@ void renderShadowMap(Shader& depthShader, GLuint depthMapFBO, glm::vec3 lightPos
 }
 
 
-
-void applyShadow(Shader& shader, GLuint depthMap, glm::mat4 lightSpaceMatrix, Model& stump, Model& house, Model& snowman) {
+void applyShadow(Shader& shader, GLuint depthMap, glm::mat4 lightSpaceMatrix, Model& stump, Model& house,
+                 Model& snowman)
+{
     shader.use();
     shader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
     shader.setInt("shadowMap", 1);
@@ -508,28 +425,36 @@ void processInput(GLFWwindow* window)
         stumpRotation = glm::vec3(0.0f, 0.0f, 0.0f);
         stumpScale = glm::vec3(0.1f, 0.1f, 0.1f);
     }
-    if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) {
-        if (!zKeyPressed) {
+    if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
+    {
+        if (!zKeyPressed)
+        {
             zKeyPressed = true;
             generator.isSnowing = !generator.isSnowing; // 切换下雪状态
-            if (!generator.isSnowing) {
+            if (!generator.isSnowing)
+            {
                 generator.clearSnowflakes(); // 清除所有雪花
             }
         }
     }
-    else if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_RELEASE) {
+    else if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_RELEASE)
+    {
         zKeyPressed = false;
     }
-    if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
-        if (!xKeyPressed) {
+    if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
+    {
+        if (!xKeyPressed)
+        {
             xKeyPressed = true;
             isSunMoving = !isSunMoving; // 切换太阳光的移动状态
-            if (!isSunMoving) {
+            if (!isSunMoving)
+            {
                 lightPos = initialLightPos; // 暂停时移动到初始位置
             }
         }
     }
-    else if (glfwGetKey(window, GLFW_KEY_X) == GLFW_RELEASE) {
+    else if (glfwGetKey(window, GLFW_KEY_X) == GLFW_RELEASE)
+    {
         xKeyPressed = false;
     }
 }
