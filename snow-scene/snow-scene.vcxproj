@@ -169,8 +169,12 @@
     <Content Include="shaders\skybox-vert.glsl" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="shaders\depth-frag.glsl" />
+    <None Include="shaders\depth-vert.glsl" />
     <None Include="shaders\model-frag.glsl" />
     <None Include="shaders\model-vert.glsl" />
+    <None Include="shaders\skybox-frag.glsl" />
+    <None Include="shaders\skybox-vert.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

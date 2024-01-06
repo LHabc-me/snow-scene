@@ -2,20 +2,33 @@
 out vec4 FragColor;
 
 in vec2 TexCoords;
-in vec3 Normal;  // ½ÓÊÕ·¨ÏßÏòÁ¿
+in vec3 Normal;  // æ¥æ”¶æ³•çº¿å‘é‡
 in vec3 FragPos;
+in vec4 FragPosLightSpace; // æ·»åŠ æ­¤è¡Œ
 
 uniform sampler2D texture_diffuse1;
 uniform vec3 lightColor;
 uniform vec3 lightPos;
 uniform vec3 viewPos;
 uniform vec3 objectColor;
+uniform sampler2D shadowMap; // é˜´å½±è´´å›¾
+
+float ShadowCalculation(vec4 fragPosLightSpace) {
+    // è·å–å½“å‰ç‰‡æ®µçš„æ·±åº¦
+    float currentDepth = fragPosLightSpace.z / fragPosLightSpace.w;
+    // ä»æ·±åº¦è´´å›¾ä¸­è·å–æ·±åº¦
+    float shadow = 0.0;
+    float bias = 0.005;
+    float closestDepth = texture(shadowMap, fragPosLightSpace.xy).r; 
+    shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+    return shadow;
+}
 
 void main()
 {    
-   // ÎÆÀí²ÉÑù
+   // çº¹ç†é‡‡æ ·
     vec4 texColor = texture(texture_diffuse1, TexCoords);
-    vec3 norm = normalize(Normal); // Ê¹ÓÃ´«µİµÄ·¨ÏßÏòÁ¿
+    vec3 norm = normalize(Normal); // ä½¿ç”¨ä¼ é€’çš„æ³•çº¿å‘é‡
     vec3 lightDir = normalize(lightPos - FragPos);
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuse = diff * lightColor;
@@ -27,7 +40,7 @@ void main()
 
     vec3 ambient = 0.1 * objectColor;
     vec3 result = ambient + diffuse + specular;
-
-    // ½áºÏÎÆÀíÑÕÉ«ºÍ¹âÕÕĞ§¹û
+    float shadow = ShadowCalculation(FragPosLightSpace); // è®¡ç®—é˜´å½±
+    // ç»“åˆçº¹ç†é¢œè‰²å’Œå…‰ç…§æ•ˆæœ
     FragColor = vec4(result, 1.0) * texColor;  
 }

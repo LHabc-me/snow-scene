@@ -21,8 +21,8 @@ void drawStamp(Shader shader, Model stump, glm::vec3 stumpPosition, glm::vec3 st
 void drawHouse(Shader shader, Model house);
 void drawSnowman(Shader shader, Model snowman);
 void initDepthBuffer(GLuint& depthMapFBO, GLuint& depthMap);
-void renderShadowMap(Shader& depthShader, GLuint depthMapFBO, glm::vec3 lightPos);
-void applyShadow(Shader& shader, GLuint depthMap, glm::mat4 lightSpaceMatrix, glm::vec3 lightPos, glm::vec3 lightColor);
+void renderShadowMap(Shader& depthShader, GLuint depthMapFBO, glm::vec3 lightPos, Model& stump, Model& house, Model& snowman);
+void applyShadow(Shader& shader, GLuint depthMap, glm::mat4 lightSpaceMatrix, Model& stump, Model& house, Model& snowman);
 glm::vec3 screenToWorldCoords(double xpos, double ypos, GLFWwindow* window, glm::mat4 view, glm::mat4 projection);
 glm::vec3 ScreenPosToWorldRay(int mouseX, int mouseY, int screenWidth, int screenHeight, glm::mat4 ViewMatrix,
                               glm::mat4 ProjectionMatrix);
@@ -204,12 +204,20 @@ int main()
         "resources/skybox/back.jpg"
     };
     Skybox skybox(faces);
-
+    Shader depthShader("shaders/depth-vert.glsl", "shaders/depth-frag.glsl");
+    GLuint depthMapFBO;
+    // 创建深度纹理
+    GLuint depthMap;
+    initDepthBuffer(depthMapFBO, depthMap);
     glm::vec3 lightColor = glm::vec3(2.0f, 2.0f, 2.0f);
     lightPos = glm::vec3(10.0f, 10.0f, 10.0f);
+    float near_plane = 1.0f, far_plane = 7.5f;
+    glm::vec3 lightTarget = glm::vec3(0.0f, 0.0f, 0.0f); // 通常是场景中心或重要物体的位置
+    glm::vec3 upVector = glm::vec3(0.0, 1.0, 0.0);
+    glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.0f, 50.0f);
+    glm::mat4 lightView = glm::lookAt(lightPos, lightTarget, upVector);
+    glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
-    /*GLuint depthMapFBO, depthMap;
-    initDepthBuffer(depthMapFBO, depthMap);*/
     // 渲染循环
     while (!glfwWindowShouldClose(window))
     {
@@ -234,15 +242,6 @@ int main()
         shader.setVec3("lightColor", lightColor);
         shader.setVec3("lightPos", lightPos);
         shader.setVec3("viewPos", camera.Position);
-        // 渲染阴影贴图
-        // renderShadowMap(depthShader, depthMapFBO, lightPos);
-        //renderShadowMap(depthShader, depthMapFBO, lightPos);
-
-        // 渲染阴影贴图
-       // renderShadowMap(depthShader, depthMapFBO, lightPos);
-
-        // 应用阴影到场景
-        //applyShadow(shader, depthMap, lightSpaceMatrix, lightPos, lightColor);
 
         // 处理输入
         processInput(window);
@@ -251,9 +250,11 @@ int main()
         glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        drawStamp(shader, stump, stumpPosition, stumpRotation, stumpScale);
-        drawHouse(shader, house);
-        drawSnowman(shader, snowman);
+        // 渲染阴影贴图
+        renderShadowMap(depthShader, depthMapFBO, lightPos, stump, house, snowman);
+        // 应用阴影到场景
+        applyShadow(shader, depthMap, lightSpaceMatrix, stump, house, snowman);
+      
         generator.update(deltaTime);
         generator.draw(shader, crystal);
 
@@ -298,35 +299,43 @@ void initDepthBuffer(GLuint& depthMapFBO, GLuint& depthMap)
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void renderShadowMap(Shader& depthShader, GLuint depthMapFBO, glm::vec3 lightPos)
+void renderShadowMap(Shader& depthShader, GLuint depthMapFBO, glm::vec3 lightPos, Model& stump, Model& house, Model& snowman)
 {
-    glm::mat4 lightProjection, lightView;
-    glm::mat4 lightSpaceMatrix;
-    float near_plane = 1.0f, far_plane = 7.5f;
-    lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
-    lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
-    lightSpaceMatrix = lightProjection * lightView;
+    // 设置视锥体和视图矩阵
+    glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 1.0f, 7.5f);
+    glm::mat4 lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+    glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
     depthShader.use();
     depthShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
-    int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
-    glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+
+    glViewport(0, 0, 1024, 1024);
     glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
     glClear(GL_DEPTH_BUFFER_BIT);
-    // ... 渲染场景的代码 ...
+
+    drawStamp(depthShader, stump, stumpPosition, stumpRotation, stumpScale);
+    drawHouse(depthShader, house);
+    drawSnowman(depthShader, snowman);
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // 恢复视口大小
+    glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 }
 
-void applyShadow(Shader& shader, GLuint depthMap, glm::mat4 lightSpaceMatrix, glm::vec3 lightPos, glm::vec3 lightColor)
-{
+
+
+void applyShadow(Shader& shader, GLuint depthMap, glm::mat4 lightSpaceMatrix, Model& stump, Model& house, Model& snowman) {
     shader.use();
     shader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
-    shader.setVec3("lightPos", lightPos);
-    shader.setVec3("lightColor", lightColor);
+    shader.setInt("shadowMap", 1);
 
-    glActiveTexture(GL_TEXTURE0);
+    glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, depthMap);
-    // ... 渲染场景的代码 ...
+
+    drawStamp(shader, stump, stumpPosition, stumpRotation, stumpScale);
+    drawHouse(shader, house);
+    drawSnowman(shader, snowman);
 }
 
 
@@ -382,7 +391,7 @@ void drawSnowman(Shader shader, Model snowman)
     modelMat = glm::translate(modelMat, glm::vec3(0.0f, 0.0f, 0.0f));
     modelMat = glm::scale(modelMat, glm::vec3(3.0f, 3.0f, 3.0f));
     modelMat = glm::rotate(modelMat, glm::radians(45.0f), glm::vec3(0.0f, -1.0f, 0.0f));
-    modelMat = glm::translate(modelMat, glm::vec3(2.0f, -0.1f, -0.6f));
+    modelMat = glm::translate(modelMat, glm::vec3(2.0f, 0.0f, -0.6f));
     shader.setMat4("model", modelMat);
     snowman.Draw(shader);
 }
