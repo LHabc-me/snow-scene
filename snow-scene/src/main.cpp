@@ -9,6 +9,7 @@
 #include "shader.h"
 #include "camera.h"
 #include "model.h"
+#include "skybox.h"
 
 #include <iostream>
 
@@ -23,8 +24,10 @@ void initDepthBuffer(GLuint& depthMapFBO, GLuint& depthMap);
 void renderShadowMap(Shader& depthShader, GLuint depthMapFBO, glm::vec3 lightPos);
 void applyShadow(Shader& shader, GLuint depthMap, glm::mat4 lightSpaceMatrix, glm::vec3 lightPos, glm::vec3 lightColor);
 glm::vec3 screenToWorldCoords(double xpos, double ypos, GLFWwindow* window, glm::mat4 view, glm::mat4 projection);
-glm::vec3 ScreenPosToWorldRay(int mouseX, int mouseY, int screenWidth, int screenHeight, glm::mat4 ViewMatrix, glm::mat4 ProjectionMatrix);
-glm::vec3 RayPlaneIntersection(glm::vec3 rayOrigin, glm::vec3 rayDirection, glm::vec3 planeNormal, glm::vec3 planePoint);
+glm::vec3 ScreenPosToWorldRay(int mouseX, int mouseY, int screenWidth, int screenHeight, glm::mat4 ViewMatrix,
+                              glm::mat4 ProjectionMatrix);
+glm::vec3 RayPlaneIntersection(glm::vec3 rayOrigin, glm::vec3 rayDirection, glm::vec3 planeNormal,
+                               glm::vec3 planePoint);
 
 
 // 窗口大小
@@ -48,12 +51,13 @@ bool dragging = false;
 glm::vec2 lastMousePos = glm::vec2(0.0f, 0.0f);
 glm::vec3 previousWorldCoords = glm::vec3(0.0f, 0.0f, 0.0f);
 
-void drawCrystal(Shader& shader, Model& crystal, glm::vec3 position) {
+void drawCrystal(Shader& shader, Model& crystal, glm::vec3 position)
+{
     shader.use();
     glm::mat4 projectionMat = glm::perspective(glm::radians(camera.Zoom),
-        (float)SCR_WIDTH / (float)SCR_HEIGHT,
-        0.1f,
-        100.0f);
+                                               (float)SCR_WIDTH / (float)SCR_HEIGHT,
+                                               0.1f,
+                                               100.0f);
     glm::mat4 viewMat = camera.GetViewMatrix();
     shader.setMat4("projection", projectionMat);
     shader.setMat4("view", viewMat);
@@ -63,19 +67,24 @@ void drawCrystal(Shader& shader, Model& crystal, glm::vec3 position) {
     crystal.Draw(shader);
 }
 
-class Snowflake {
+class Snowflake
+{
 public:
     glm::vec3 position;
     glm::vec3 velocity;
 
-    Snowflake(glm::vec3 pos, glm::vec3 vel) : position(pos), velocity(vel) {}
+    Snowflake(glm::vec3 pos, glm::vec3 vel) : position(pos), velocity(vel)
+    {
+    }
 
-    void update(float deltaTime) {
+    void update(float deltaTime)
+    {
         position += velocity * deltaTime;
     }
 };
 
-class SnowflakeGenerator {
+class SnowflakeGenerator
+{
 public:
     std::vector<Snowflake> snowflakes;
     float spawnInterval = 1.0f; // 每秒生成雪花的时间间隔
@@ -86,37 +95,45 @@ public:
     float xVelRange = 1.0f; // x轴速度范围
     float yVel = -2.0f; // y轴速度（向下）
     float zVelRange = 1.0f; // z轴速度范围
-    void update(float deltaTime) {
+    void update(float deltaTime)
+    {
         elapsedTime += deltaTime;
-        if (elapsedTime >= spawnInterval) {
+        if (elapsedTime >= spawnInterval)
+        {
             elapsedTime = 0.0f;
             int count = rand() % 5 + 1; // 随机生成1到5朵雪花
-            for (int i = 0; i < count; i++) {
-                float x = static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * xRange - 8.0f;
+            for (int i = 0; i < count; i++)
+            {
+                float x = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * xRange - 8.0f;
                 float y = yStart;
-                float z = static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * zRange - 8.0f;
+                float z = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * zRange - 8.0f;
 
-                float xVel = (static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * xVelRange) - xVelRange / 2.0f;
-                float zVel = (static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * zVelRange) - zVelRange / 2.0f;
+                float xVel = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * xVelRange) - xVelRange / 2.0f;
+                float zVel = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * zVelRange) - zVelRange / 2.0f;
                 glm::vec3 pos = glm::vec3(x, y, z);
                 glm::vec3 vel = glm::vec3(xVel, yVel, zVel);
                 snowflakes.push_back(Snowflake(pos, vel));
             }
         }
 
-        for (auto it = snowflakes.begin(); it != snowflakes.end();) {
+        for (auto it = snowflakes.begin(); it != snowflakes.end();)
+        {
             it->update(deltaTime);
-            if (it->position.y <= 0) {
+            if (it->position.y <= 0)
+            {
                 it = snowflakes.erase(it);
             }
-            else {
+            else
+            {
                 ++it;
             }
         }
     }
 
-    void draw(Shader& shader, Model& model) {
-        for (const auto& snowflake : snowflakes) {
+    void draw(Shader& shader, Model& model)
+    {
+        for (const auto& snowflake : snowflakes)
+        {
             drawCrystal(shader, model, snowflake.position);
         }
     }
@@ -168,6 +185,18 @@ int main()
     Model snowman("resources/snowman/snowman.obj");
     Model crystal("resources/crystal/crystal.obj");
 
+    // 加载天空盒
+    std::vector<std::string> faces
+    {
+        "resources/skybox/right.jpg",
+        "resources/skybox/left.jpg",
+        "resources/skybox/top.jpg",
+        "resources/skybox/bottom.jpg",
+        "resources/skybox/front.jpg",
+        "resources/skybox/back.jpg"
+    };
+    Skybox skybox(faces);
+
     glm::vec3 lightColor = glm::vec3(2.0f, 2.0f, 2.0f);
     glm::vec3 lightPos = glm::vec3(10.0f, 10.0f, 10.0f);
 
@@ -200,7 +229,7 @@ int main()
         shader.setVec3("lightPos", lightPos);
         shader.setVec3("viewPos", camera.Position);
         // 渲染阴影贴图
-       // renderShadowMap(depthShader, depthMapFBO, lightPos);
+        // renderShadowMap(depthShader, depthMapFBO, lightPos);
 
         // 应用阴影到场景
         //applyShadow(shader, depthMap, lightSpaceMatrix, lightPos, lightColor);
@@ -218,6 +247,15 @@ int main()
         generator.update(deltaTime);
         generator.draw(shader, crystal);
 
+        glm::mat4 view = camera.GetViewMatrix();
+        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom),
+                                                (float)SCR_WIDTH / (float)SCR_HEIGHT,
+                                                0.1f,
+                                                100.0f);
+        // 放大天空盒
+        // projection = glm::scale(projection, glm::vec3(10.0f, 10.0f, 10.0f));
+        skybox.draw(view, projection);
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
@@ -226,20 +264,21 @@ int main()
     return 0;
 }
 
-void initDepthBuffer(GLuint& depthMapFBO, GLuint& depthMap) {
+void initDepthBuffer(GLuint& depthMapFBO, GLuint& depthMap)
+{
     const GLuint SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 
     glGenFramebuffers(1, &depthMapFBO);
     glGenTextures(1, &depthMap);
     glBindTexture(GL_TEXTURE_2D, depthMap);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
-        SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT,
-        GL_FLOAT, NULL);
+                 SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT,
+                 GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    float borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
+    float borderColor[] = {1.0, 1.0, 1.0, 1.0};
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
     glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
@@ -249,7 +288,8 @@ void initDepthBuffer(GLuint& depthMapFBO, GLuint& depthMap) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void renderShadowMap(Shader& depthShader, GLuint depthMapFBO, glm::vec3 lightPos) {
+void renderShadowMap(Shader& depthShader, GLuint depthMapFBO, glm::vec3 lightPos)
+{
     glm::mat4 lightProjection, lightView;
     glm::mat4 lightSpaceMatrix;
     float near_plane = 1.0f, far_plane = 7.5f;
@@ -267,7 +307,8 @@ void renderShadowMap(Shader& depthShader, GLuint depthMapFBO, glm::vec3 lightPos
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void applyShadow(Shader& shader, GLuint depthMap, glm::mat4 lightSpaceMatrix, glm::vec3 lightPos, glm::vec3 lightColor) {
+void applyShadow(Shader& shader, GLuint depthMap, glm::mat4 lightSpaceMatrix, glm::vec3 lightPos, glm::vec3 lightColor)
+{
     shader.use();
     shader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
     shader.setVec3("lightPos", lightPos);
@@ -279,10 +320,12 @@ void applyShadow(Shader& shader, GLuint depthMap, glm::mat4 lightSpaceMatrix, gl
 }
 
 
-void drawStamp(Shader shader, Model stump, glm::vec3 stumpPosition, glm::vec3 stumpRotation, glm::vec3 stumpScale) {
+void drawStamp(Shader shader, Model stump, glm::vec3 stumpPosition, glm::vec3 stumpRotation, glm::vec3 stumpScale)
+{
     shader.use();
 
-    glm::mat4 projectionMat = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+    glm::mat4 projectionMat = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f,
+                                               100.0f);
     glm::mat4 viewMat = camera.GetViewMatrix();
     shader.setMat4("projection", projectionMat);
     shader.setMat4("view", viewMat);
@@ -335,7 +378,6 @@ void drawSnowman(Shader shader, Model snowman)
 }
 
 
-
 // 处理输入 用于上下左右前后移动
 void processInput(GLFWwindow* window)
 {
@@ -359,14 +401,17 @@ void processInput(GLFWwindow* window)
     bool ctrlPressed = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS;
     bool shiftPressed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
 
-    if (ctrlPressed) {
-        if (shiftPressed) {
+    if (ctrlPressed)
+    {
+        if (shiftPressed)
+        {
             if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
                 stumpRotation.z += 10.0f;
             if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
                 stumpRotation.z -= 10.0f;
         }
-        else {
+        else
+        {
             // 处理旋转
             if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
                 stumpRotation.x += 10.0f;
@@ -377,15 +422,18 @@ void processInput(GLFWwindow* window)
             if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
                 stumpRotation.y += 10.0f;
         }
-    }   
-    else {
-        if (shiftPressed) {
+    }
+    else
+    {
+        if (shiftPressed)
+        {
             if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
                 stumpScale.z -= 0.01f;
             if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
                 stumpScale.z += 0.01f;
         }
-        else {
+        else
+        {
             // 处理树桩X轴和Y轴缩放（无需按住Shift或Ctrl）
             if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
                 stumpScale.y += 0.01f;
@@ -400,37 +448,51 @@ void processInput(GLFWwindow* window)
 
 
     // 检测鼠标按下状态
-    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+    {
         double xpos, ypos;
         glfwGetCursorPos(window, &xpos, &ypos);
 
-        if (!dragging) {
+        if (!dragging)
+        {
             dragging = true;
             lastMousePos = glm::vec2(xpos, ypos);
 
-            glm::vec3 rayDirection = ScreenPosToWorldRay(xpos, ypos, SCR_WIDTH, SCR_HEIGHT, camera.GetViewMatrix(), camera.GetProjectionMatrix(static_cast<float>(SCR_WIDTH) / static_cast<float>(SCR_HEIGHT), 0.1f, 100.0f));
-            previousWorldCoords = RayPlaneIntersection(camera.Position, rayDirection, glm::vec3(0, 1, 0), glm::vec3(0, 0, 0)); // 假设平面为y=0
+            glm::vec3 rayDirection = ScreenPosToWorldRay(xpos, ypos, SCR_WIDTH, SCR_HEIGHT, camera.GetViewMatrix(),
+                                                         camera.GetProjectionMatrix(
+                                                             static_cast<float>(SCR_WIDTH) / static_cast<float>(
+                                                                 SCR_HEIGHT), 0.1f, 100.0f));
+            previousWorldCoords = RayPlaneIntersection(camera.Position, rayDirection, glm::vec3(0, 1, 0),
+                                                       glm::vec3(0, 0, 0)); // 假设平面为y=0
         }
-        else {
-            glm::vec3 rayDirection = ScreenPosToWorldRay(xpos, ypos, SCR_WIDTH, SCR_HEIGHT, camera.GetViewMatrix(), camera.GetProjectionMatrix(static_cast<float>(SCR_WIDTH) / static_cast<float>(SCR_HEIGHT), 0.1f, 100.0f));
-            glm::vec3 currentWorldCoords = RayPlaneIntersection(camera.Position, rayDirection, glm::vec3(0, 1, 0), glm::vec3(0, 0, 0)); // 假设平面为y=0
+        else
+        {
+            glm::vec3 rayDirection = ScreenPosToWorldRay(xpos, ypos, SCR_WIDTH, SCR_HEIGHT, camera.GetViewMatrix(),
+                                                         camera.GetProjectionMatrix(
+                                                             static_cast<float>(SCR_WIDTH) / static_cast<float>(
+                                                                 SCR_HEIGHT), 0.1f, 100.0f));
+            glm::vec3 currentWorldCoords = RayPlaneIntersection(camera.Position, rayDirection, glm::vec3(0, 1, 0),
+                                                                glm::vec3(0, 0, 0)); // 假设平面为y=0
 
             glm::vec3 deltaWorld = currentWorldCoords - previousWorldCoords;
             stumpPosition += deltaWorld;
             previousWorldCoords = currentWorldCoords;
         }
     }
-    else if (dragging) {
+    else if (dragging)
+    {
         dragging = false;
     }
-    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) {
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
+    {
         stumpPosition = glm::vec3(0.0f, 0.0f, 5.0f);
         stumpRotation = glm::vec3(0.0f, 0.0f, 0.0f);
         stumpScale = glm::vec3(0.1f, 0.1f, 0.1f);
     }
 }
 
-glm::vec3 screenToWorldCoords(double xpos, double ypos, GLFWwindow* window, glm::mat4 view, glm::mat4 projection) {
+glm::vec3 screenToWorldCoords(double xpos, double ypos, GLFWwindow* window, glm::mat4 view, glm::mat4 projection)
+{
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
 
@@ -451,7 +513,9 @@ glm::vec3 screenToWorldCoords(double xpos, double ypos, GLFWwindow* window, glm:
 }
 
 
-glm::vec3 ScreenPosToWorldRay(int mouseX, int mouseY, int screenWidth, int screenHeight, glm::mat4 ViewMatrix, glm::mat4 ProjectionMatrix) {
+glm::vec3 ScreenPosToWorldRay(int mouseX, int mouseY, int screenWidth, int screenHeight, glm::mat4 ViewMatrix,
+                              glm::mat4 ProjectionMatrix)
+{
     glm::vec4 rayStartNDC(
         ((float)mouseX / (float)screenWidth - 0.5f) * 2.0f,
         ((float)mouseY / (float)screenHeight - 0.5f) * 2.0f,
@@ -477,9 +541,12 @@ glm::vec3 ScreenPosToWorldRay(int mouseX, int mouseY, int screenWidth, int scree
 }
 
 
-glm::vec3 RayPlaneIntersection(glm::vec3 rayOrigin, glm::vec3 rayDirection, glm::vec3 planeNormal, glm::vec3 planePoint) {
+glm::vec3 RayPlaneIntersection(glm::vec3 rayOrigin, glm::vec3 rayDirection, glm::vec3 planeNormal, glm::vec3 planePoint)
+{
     float denom = glm::dot(planeNormal, rayDirection);
-    if (abs(denom) > 0.0001f) { // 非平行
+    if (abs(denom) > 0.0001f)
+    {
+        // 非平行
         float t = glm::dot(planePoint - rayOrigin, planeNormal) / denom;
         return rayOrigin + rayDirection * t;
     }

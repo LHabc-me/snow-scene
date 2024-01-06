@@ -71,10 +71,10 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>D:\VS2022\snow-scene\snow-scene\includes;D:\VS2022\snow-scene\snow-scene\includes;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Users\32774\Desktop\snow-scene\snow-scene\includes;D:\VS2022\snow-scene\snow-scene\includes;D:\VS2022\snow-scene\snow-scene\includes;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>D:\VS2022\snow-scene\snow-scene\includes;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>C:\Users\32774\Desktop\snow-scene\snow-scene\includes;D:\VS2022\snow-scene\snow-scene\includes;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -140,14 +140,22 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="includes\camera.h" />
+    <ClInclude Include="includes\skybox.h" />
     <ClInclude Include="includes\mesh.h" />
     <ClInclude Include="includes\model.h" />
     <ClInclude Include="includes\shader.h" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="resources\crystal\crystal.obj" />
     <Content Include="resources\house\house.mtl" />
     <Content Include="resources\house\house.obj" />
     <Content Include="resources\house\textures\Image_0.png" />
+    <Content Include="resources\skybox\back.jpg" />
+    <Content Include="resources\skybox\bottom.jpg" />
+    <Content Include="resources\skybox\front.jpg" />
+    <Content Include="resources\skybox\left.jpg" />
+    <Content Include="resources\skybox\right.jpg" />
+    <Content Include="resources\skybox\top.jpg" />
     <Content Include="resources\snowman\snowman.mtl" />
     <Content Include="resources\snowman\snowman.obj" />
     <Content Include="resources\snowman\snowman_BaseColor.png" />
@@ -157,6 +165,8 @@
     <Content Include="resources\stump\stump-in-winter.fbx" />
     <Content Include="shaders\model-frag.glsl" />
     <Content Include="shaders\model-vert.glsl" />
+    <Content Include="shaders\skybox-frag.glsl" />
+    <Content Include="shaders\skybox-vert.glsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\model-frag.glsl" />
