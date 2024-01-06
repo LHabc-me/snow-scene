@@ -29,7 +29,6 @@ glm::vec3 ScreenPosToWorldRay(int mouseX, int mouseY, int screenWidth, int scree
 glm::vec3 RayPlaneIntersection(glm::vec3 rayOrigin, glm::vec3 rayDirection, glm::vec3 planeNormal,
                                glm::vec3 planePoint);
 
-
 // 窗口大小
 const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 768;
@@ -50,6 +49,9 @@ glm::vec3 stumpScale = glm::vec3(0.1f, 0.1f, 0.1f);
 bool dragging = false;
 glm::vec2 lastMousePos = glm::vec2(0.0f, 0.0f);
 glm::vec3 previousWorldCoords = glm::vec3(0.0f, 0.0f, 0.0f);
+bool zKeyPressed = false;
+bool isSunMoving = true;
+bool xKeyPressed = false;
 
 void drawCrystal(Shader& shader, Model& crystal, glm::vec3 position)
 {
@@ -86,6 +88,7 @@ public:
 class SnowflakeGenerator
 {
 public:
+    bool isSnowing = true; // 控制是否下雪的变量
     std::vector<Snowflake> snowflakes;
     float spawnInterval = 1.0f; // 每秒生成雪花的时间间隔
     float elapsedTime = 0.0f;
@@ -95,8 +98,8 @@ public:
     float xVelRange = 1.0f; // x轴速度范围
     float yVel = -2.0f; // y轴速度（向下）
     float zVelRange = 1.0f; // z轴速度范围
-    void update(float deltaTime)
-    {
+    void update(float deltaTime) {
+        if (!isSnowing) return; // 如果不下雪，直接返回
         elapsedTime += deltaTime;
         if (elapsedTime >= spawnInterval)
         {
@@ -136,9 +139,14 @@ public:
         {
             drawCrystal(shader, model, snowflake.position);
         }
+    } 
+    void clearSnowflakes() {
+        snowflakes.clear(); // 清除所有雪花
     }
 };
-
+SnowflakeGenerator generator;
+glm::vec3 lightPos;
+glm::vec3 initialLightPos = glm::vec3(10.0f, 10.0f, 10.0f);
 int main()
 {
     // glfw初始化
@@ -198,11 +206,10 @@ int main()
     Skybox skybox(faces);
 
     glm::vec3 lightColor = glm::vec3(2.0f, 2.0f, 2.0f);
-    glm::vec3 lightPos = glm::vec3(10.0f, 10.0f, 10.0f);
+    lightPos = glm::vec3(10.0f, 10.0f, 10.0f);
 
     /*GLuint depthMapFBO, depthMap;
     initDepthBuffer(depthMapFBO, depthMap);*/
-    SnowflakeGenerator generator;
     // 渲染循环
     while (!glfwWindowShouldClose(window))
     {
@@ -211,7 +218,7 @@ int main()
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        // 
+        if (isSunMoving) {
         // 计算移动时间
         float speedFactor = 0.2f;
         float timeValue = glfwGetTime() * speedFactor;
@@ -221,15 +228,18 @@ int main()
         float lightPosY = 20.0f * sin(timeValue);
         float lightPosZ = sin(timeValue) * maxAltitude;
 
-        glm::vec3 lightPos = glm::vec3(lightPosX, lightPosY, lightPosZ);
-        // 渲染阴影贴图
-        //renderShadowMap(depthShader, depthMapFBO, lightPos);
+        lightPos = glm::vec3(lightPosX, lightPosY, lightPosZ);
+        }
         shader.use();
         shader.setVec3("lightColor", lightColor);
         shader.setVec3("lightPos", lightPos);
         shader.setVec3("viewPos", camera.Position);
         // 渲染阴影贴图
         // renderShadowMap(depthShader, depthMapFBO, lightPos);
+        //renderShadowMap(depthShader, depthMapFBO, lightPos);
+
+        // 渲染阴影贴图
+       // renderShadowMap(depthShader, depthMapFBO, lightPos);
 
         // 应用阴影到场景
         //applyShadow(shader, depthMap, lightSpaceMatrix, lightPos, lightColor);
@@ -488,6 +498,30 @@ void processInput(GLFWwindow* window)
         stumpPosition = glm::vec3(0.0f, 0.0f, 5.0f);
         stumpRotation = glm::vec3(0.0f, 0.0f, 0.0f);
         stumpScale = glm::vec3(0.1f, 0.1f, 0.1f);
+    }
+    if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) {
+        if (!zKeyPressed) {
+            zKeyPressed = true;
+            generator.isSnowing = !generator.isSnowing; // 切换下雪状态
+            if (!generator.isSnowing) {
+                generator.clearSnowflakes(); // 清除所有雪花
+            }
+        }
+    }
+    else if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_RELEASE) {
+        zKeyPressed = false;
+    }
+    if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
+        if (!xKeyPressed) {
+            xKeyPressed = true;
+            isSunMoving = !isSunMoving; // 切换太阳光的移动状态
+            if (!isSunMoving) {
+                lightPos = initialLightPos; // 暂停时移动到初始位置
+            }
+        }
+    }
+    else if (glfwGetKey(window, GLFW_KEY_X) == GLFW_RELEASE) {
+        xKeyPressed = false;
     }
 }
 
