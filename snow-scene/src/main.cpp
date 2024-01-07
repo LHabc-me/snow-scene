@@ -85,8 +85,6 @@ int main()
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetScrollCallback(window, scroll_callback);
-
-    // 
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -101,7 +99,7 @@ int main()
     // 着色器
     Shader shader("shaders/model-vert.glsl", "shaders/model-frag.glsl");
 
-    // 加载模型：树桩，房屋，雪人
+    // 加载模型：树桩，房屋，雪人，雪花
     Model stump("resources/stump/stump-in-winter.fbx");
     Model house("resources/house/house.obj");
     Model snowman("resources/snowman/snowman.obj");
